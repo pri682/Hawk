@@ -1,0 +1,30 @@
+{
+  "name": "hawk",
+  "version": "0.1.0",
+  "description": "AI event attendee — joins live streams, webinars and lectures on your behalf",
+  "type": "module",
+  "bin": {
+    "hawk": "bin/hawk.mjs"
+  },
+  "files": [
+    "bin",
+    "scripts",
+    "SKILL.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pri682/hawk.git"
+  },
+  "homepage": "https://github.com/pri682/hawk",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "playwright-core": "^1.58.2",
+    "tsx": "^4.21.0"
+  }
+}
