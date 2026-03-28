@@ -5,6 +5,7 @@ import { homedir } from "node:os";
 import { setupYouTube } from "./platforms/youtube.js";
 import { setupXSpaces } from "./platforms/x-spaces.js";
 import { setupZoom } from "./platforms/zoom.js";
+import { parseCommand, setStartTime, checkKeywordsAndReply } from "./hawk-commands.js";
 
 // ─── CLI args ────────────────────────────────────────────────────────────────
 
@@ -121,7 +122,8 @@ function onCaption(text: string): void {
   if (text === lastCaption) return;
   lastCaption = text;
   writeTranscript(`[${timestamp()}] 🎙️  ${text}`);
-  checkKeywords(text);
+  const kwReply = checkKeywordsAndReply(text);
+  if (kwReply) console.log(`[HAWK_KEYWORD] ${kwReply}`);
 }
 
 function onChat(user: string, text: string): void {
@@ -132,17 +134,8 @@ function onChat(user: string, text: string): void {
   if (seenChat.has(key)) return;
   seenChat.add(key);
   writeTranscript(`[${timestamp()}] 💬 ${user}: ${text}`);
-  checkKeywords(text);
-}
-
-function checkKeywords(text: string): void {
-  if (keywords.length === 0) return;
-  const lower = text.toLowerCase();
-  for (const kw of keywords) {
-    if (lower.includes(kw)) {
-      console.log(`[HAWK_KEYWORD] "${kw}" mentioned: ${text}`);
-    }
-  }
+  const kwReply = checkKeywordsAndReply(text);
+  if (kwReply) console.log(`[HAWK_KEYWORD] ${kwReply}`);
 }
 
 // ─── Main ────────────────────────────────────────────────────────────────────
@@ -153,6 +146,8 @@ async function main(): Promise<void> {
     console.error("Supported: YouTube Live, X Spaces (twitter.com/i/spaces/...), Zoom (zoom.us/j/...)");
     process.exit(1);
   }
+
+  setStartTime(Date.now());
 
   console.log(`[Hawk] Platform : ${platform}`);
   console.log(`[Hawk] Stream ID: ${streamId}`);
@@ -185,7 +180,10 @@ async function main(): Promise<void> {
     console.log("[Hawk] Using saved auth session");
   }
 
-  const context = await browser.newContext(contextOptions);
+  const context = await browser.newContext({
+    ...contextOptions,
+    permissions: ["microphone", "camera"],  // auto-grant so macOS never shows the system dialog
+  });
 
   // Stealth: override headless detection signals
   await context.addInitScript(() => {
@@ -214,11 +212,11 @@ async function main(): Promise<void> {
 
   try {
     if (platform === "youtube") {
-      await setupYouTube(page, url, { verbose });
+      await setupYouTube(page, url, { verbose, onCommand: parseCommand });
     } else if (platform === "x-spaces") {
       await setupXSpaces(page, url, { verbose });
     } else if (platform === "zoom") {
-      await setupZoom(page, url, { verbose });
+      await setupZoom(page, url, { verbose, onCommand: parseCommand });
     }
 
     // Confirmation screenshot
